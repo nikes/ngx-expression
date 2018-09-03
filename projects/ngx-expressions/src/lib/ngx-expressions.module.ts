@@ -1,10 +1,24 @@
-import { NgModule } from '@angular/core';
-import { NgxExpressionsComponent } from './ngx-expressions.component';
+import { ModuleWithProviders, NgModule, Optional, SkipSelf } from '@angular/core';
+import { NgxExpressionsService } from './ngx-expressions.service';
 
 @NgModule({
-  imports: [
-  ],
-  declarations: [NgxExpressionsComponent],
-  exports: [NgxExpressionsComponent]
+  imports: [],
+  exports: [],
+  providers: [
+    NgxExpressionsService
+  ]
 })
-export class NgxExpressionsModule { }
+export class NgxExpressionsModule {
+  public static forRoot(): ModuleWithProviders {
+    return {
+      ngModule: NgxExpressionsModule
+    };
+  }
+
+  constructor(@Optional() @SkipSelf() parentModule: NgxExpressionsModule) {
+    if (parentModule) {
+      throw new Error(
+        'NgxExpressionsModule is already loaded. Import it in the root module only');
+    }
+  }
+}
