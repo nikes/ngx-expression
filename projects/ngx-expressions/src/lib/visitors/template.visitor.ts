@@ -174,7 +174,7 @@ export class TemplateVisitor implements AstVisitor {
   }
 
   visitPipe(ast: BindingPipe, context: any): Function {
-    return undefined;
+    return () => undefined;
   }
 
   visitPrefixNot(ast: PrefixNot, context: any): Function {
@@ -183,7 +183,7 @@ export class TemplateVisitor implements AstVisitor {
   }
 
   visitNonNullAssert(ast: NonNullAssert, context: any): Function {
-    return undefined;
+    return () => undefined;
   }
 
   visitPropertyRead(ast: PropertyRead, context: any): Function {
@@ -195,11 +195,11 @@ export class TemplateVisitor implements AstVisitor {
   }
 
   visitQuote(ast: Quote, context: any): Function {
-    return undefined;
+    return () => undefined;
   }
 
   visitSafeMethodCall(ast: SafeMethodCall, context: any): Function {
-    return undefined;
+    return () => undefined;
   }
 
   visitSafePropertyRead(ast: SafePropertyRead, context: any): Function {

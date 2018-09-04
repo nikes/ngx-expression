@@ -6,7 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 // tslint:disable
-
 import * as chars from '../chars';
 
 export enum TokenType {
@@ -35,47 +34,71 @@ export class Lexer {
 }
 
 export class Token {
-  constructor(
-      public index: number, public type: TokenType, public numValue: number,
-      public strValue: string) {}
+  constructor(public index: number, public type: TokenType, public numValue: number,
+              public strValue: string) {
+  }
 
   isCharacter(code: number): boolean {
     return this.type == TokenType.Character && this.numValue == code;
   }
 
-  isNumber(): boolean { return this.type == TokenType.Number; }
+  isNumber(): boolean {
+    return this.type == TokenType.Number;
+  }
 
-  isString(): boolean { return this.type == TokenType.String; }
+  isString(): boolean {
+    return this.type == TokenType.String;
+  }
 
   isOperator(operater: string): boolean {
     return this.type == TokenType.Operator && this.strValue == operater;
   }
 
-  isIdentifier(): boolean { return this.type == TokenType.Identifier; }
+  isIdentifier(): boolean {
+    return this.type == TokenType.Identifier;
+  }
 
-  isKeyword(): boolean { return this.type == TokenType.Keyword; }
+  isKeyword(): boolean {
+    return this.type == TokenType.Keyword;
+  }
 
-  isKeywordLet(): boolean { return this.type == TokenType.Keyword && this.strValue == 'let'; }
+  isKeywordLet(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'let';
+  }
 
-  isKeywordAs(): boolean { return this.type == TokenType.Keyword && this.strValue == 'as'; }
+  isKeywordAs(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'as';
+  }
 
-  isKeywordNull(): boolean { return this.type == TokenType.Keyword && this.strValue == 'null'; }
+  isKeywordNull(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'null';
+  }
 
   isKeywordUndefined(): boolean {
     return this.type == TokenType.Keyword && this.strValue == 'undefined';
   }
 
-  isKeywordTrue(): boolean { return this.type == TokenType.Keyword && this.strValue == 'true'; }
+  isKeywordTrue(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'true';
+  }
 
-  isKeywordFalse(): boolean { return this.type == TokenType.Keyword && this.strValue == 'false'; }
+  isKeywordFalse(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'false';
+  }
 
-  isKeywordThis(): boolean { return this.type == TokenType.Keyword && this.strValue == 'this'; }
+  isKeywordThis(): boolean {
+    return this.type == TokenType.Keyword && this.strValue == 'this';
+  }
 
-  isError(): boolean { return this.type == TokenType.Error; }
+  isError(): boolean {
+    return this.type == TokenType.Error;
+  }
 
-  toNumber(): number { return this.type == TokenType.Number ? this.numValue : -1; }
+  toNumber(): number {
+    return this.type == TokenType.Number ? this.numValue : -1;
+  }
 
-  toString(): string|null {
+  toString(): string | null {
     switch (this.type) {
       case TokenType.Character:
       case TokenType.Identifier:
@@ -136,7 +159,7 @@ class _Scanner {
     this.peek = ++this.index >= this.length ? chars.$EOF : this.input.charCodeAt(this.index);
   }
 
-  scanToken(): Token|null {
+  scanToken(): Token | null {
     const input = this.input, length = this.length;
     let peek = this.peek, index = this.index;
 
@@ -166,7 +189,7 @@ class _Scanner {
       case chars.$PERIOD:
         this.advance();
         return chars.isDigit(this.peek) ? this.scanNumber(start) :
-                                          newCharacterToken(start, chars.$PERIOD);
+          newCharacterToken(start, chars.$PERIOD);
       case chars.$LPAREN:
       case chars.$RPAREN:
       case chars.$LBRACE:
@@ -196,7 +219,7 @@ class _Scanner {
       case chars.$BANG:
       case chars.$EQ:
         return this.scanComplexOperator(
-            start, String.fromCharCode(peek), chars.$EQ, '=', chars.$EQ, '=');
+          start, String.fromCharCode(peek), chars.$EQ, '=', chars.$EQ, '=');
       case chars.$AMPERSAND:
         return this.scanComplexOperator(start, '&', chars.$AMPERSAND, '&');
       case chars.$BAR:
@@ -231,9 +254,8 @@ class _Scanner {
    * @param threeCode code point for the third symbol
    * @param three third symbol (part of the operator when provided and matches source expression)
    */
-  scanComplexOperator(
-      start: number, one: string, twoCode: number, two: string, threeCode?: number,
-      three?: string): Token {
+  scanComplexOperator(start: number, one: string, twoCode: number, two: string, threeCode?: number,
+                      three?: string): Token {
     this.advance();
     let str: string = one;
     if (this.peek == twoCode) {
@@ -253,7 +275,7 @@ class _Scanner {
     while (isIdentifierPart(this.peek)) this.advance();
     const str: string = this.input.substring(start, this.index);
     return KEYWORDS.indexOf(str) > -1 ? newKeywordToken(start, str) :
-                                        newIdentifierToken(start, str);
+      newIdentifierToken(start, str);
   }
 
   scanNumber(start: number): Token {
@@ -328,13 +350,13 @@ class _Scanner {
   error(message: string, offset: number): Token {
     const position: number = this.index + offset;
     return newErrorToken(
-        position, `Lexer Error: ${message} at column ${position} in expression [${this.input}]`);
+      position, `Lexer Error: ${message} at column ${position} in expression [${this.input}]`);
   }
 }
 
 function isIdentifierStart(code: number): boolean {
   return (chars.$a <= code && code <= chars.$z) || (chars.$A <= code && code <= chars.$Z) ||
-      (code == chars.$_) || (code == chars.$$);
+    (code == chars.$_) || (code == chars.$$);
 }
 
 export function isIdentifier(input: string): boolean {
@@ -351,7 +373,7 @@ export function isIdentifier(input: string): boolean {
 
 function isIdentifierPart(code: number): boolean {
   return chars.isAsciiLetter(code) || chars.isDigit(code) || (code == chars.$_) ||
-      (code == chars.$$);
+    (code == chars.$$);
 }
 
 function isExponentStart(code: number): boolean {

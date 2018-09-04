@@ -6,22 +6,51 @@
  * found in the LICENSE file at https://angular.io/license
  */
 // tslint:disable
-
 import * as chars from '../chars';
-import {DEFAULT_INTERPOLATION_CONFIG, InterpolationConfig} from '../ml_parser/interpolation_config';
-import {escapeRegExp} from '../util';
+import { DEFAULT_INTERPOLATION_CONFIG, InterpolationConfig } from '../ml_parser/interpolation_config';
+import { escapeRegExp } from '../util';
 
-import {AST, ASTWithSource, AstVisitor, Binary, BindingPipe, Chain, Conditional, EmptyExpr, FunctionCall, ImplicitReceiver, Interpolation, KeyedRead, KeyedWrite, LiteralArray, LiteralMap, LiteralMapKey, LiteralPrimitive, MethodCall, NonNullAssert, ParseSpan, ParserError, PrefixNot, PropertyRead, PropertyWrite, Quote, SafeMethodCall, SafePropertyRead, TemplateBinding} from './ast';
-import {EOF, Lexer, Token, TokenType, isIdentifier, isQuote} from './lexer';
+import {
+  AST,
+  ASTWithSource,
+  AstVisitor,
+  Binary,
+  BindingPipe,
+  Chain,
+  Conditional,
+  EmptyExpr,
+  FunctionCall,
+  ImplicitReceiver,
+  Interpolation,
+  KeyedRead,
+  KeyedWrite,
+  LiteralArray,
+  LiteralMap,
+  LiteralMapKey,
+  LiteralPrimitive,
+  MethodCall,
+  NonNullAssert,
+  ParseSpan,
+  ParserError,
+  PrefixNot,
+  PropertyRead,
+  PropertyWrite,
+  Quote,
+  SafeMethodCall,
+  SafePropertyRead,
+  TemplateBinding
+} from './ast';
+import { EOF, Lexer, Token, TokenType, isIdentifier, isQuote } from './lexer';
 
 export class SplitInterpolation {
-  constructor(public strings: string[], public expressions: string[], public offsets: number[]) {}
+  constructor(public strings: string[], public expressions: string[], public offsets: number[]) {
+  }
 }
 
 export class TemplateBindingParseResult {
-  constructor(
-      public templateBindings: TemplateBinding[], public warnings: string[],
-      public errors: ParserError[]) {}
+  constructor(public templateBindings: TemplateBinding[], public warnings: string[],
+              public errors: ParserError[]) {
+  }
 }
 
 function _createInterpolateRegExp(config: InterpolationConfig): RegExp {
@@ -32,36 +61,34 @@ function _createInterpolateRegExp(config: InterpolationConfig): RegExp {
 export class Parser {
   private errors: ParserError[] = [];
 
-  constructor(private _lexer: Lexer) {}
+  constructor(private _lexer: Lexer) {
+  }
 
-  parseAction(
-      input: string, location: any,
-      interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
+  parseAction(input: string, location: any,
+              interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
     this._checkNoInterpolation(input, location, interpolationConfig);
     const sourceToLex = this._stripComments(input);
     const tokens = this._lexer.tokenize(this._stripComments(input));
     const ast = new _ParseAST(
-                    input, location, tokens, sourceToLex.length, true, this.errors,
-                    input.length - sourceToLex.length)
-                    .parseChain();
+      input, location, tokens, sourceToLex.length, true, this.errors,
+      input.length - sourceToLex.length)
+      .parseChain();
     return new ASTWithSource(ast, input, location, this.errors);
   }
 
-  parseBinding(
-      input: string, location: any,
-      interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
+  parseBinding(input: string, location: any,
+               interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
     const ast = this._parseBindingAst(input, location, interpolationConfig);
     return new ASTWithSource(ast, input, location, this.errors);
   }
 
-  parseSimpleBinding(
-      input: string, location: string,
-      interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
+  parseSimpleBinding(input: string, location: string,
+                     interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource {
     const ast = this._parseBindingAst(input, location, interpolationConfig);
     const errors = SimpleExpressionChecker.check(ast);
     if (errors.length > 0) {
       this._reportError(
-          `Host binding expression cannot contain ${errors.join(' ')}`, input, location);
+        `Host binding expression cannot contain ${errors.join(' ')}`, input, location);
     }
     return new ASTWithSource(ast, input, location, this.errors);
   }
@@ -70,8 +97,7 @@ export class Parser {
     this.errors.push(new ParserError(message, input, errLocation, ctxLocation));
   }
 
-  private _parseBindingAst(
-      input: string, location: string, interpolationConfig: InterpolationConfig): AST {
+  private _parseBindingAst(input: string, location: string, interpolationConfig: InterpolationConfig): AST {
     // Quotes expressions use 3rd-party expression language. We don't want to use
     // our lexer or parser for that, so we check for that ahead of time.
     const quote = this._parseQuote(input, location);
@@ -84,12 +110,12 @@ export class Parser {
     const sourceToLex = this._stripComments(input);
     const tokens = this._lexer.tokenize(sourceToLex);
     return new _ParseAST(
-               input, location, tokens, sourceToLex.length, false, this.errors,
-               input.length - sourceToLex.length)
-        .parseChain();
+      input, location, tokens, sourceToLex.length, false, this.errors,
+      input.length - sourceToLex.length)
+      .parseChain();
   }
 
-  private _parseQuote(input: string|null, location: any): AST|null {
+  private _parseQuote(input: string | null, location: any): AST | null {
     if (input == null) return null;
     const prefixSeparatorIndex = input.indexOf(':');
     if (prefixSeparatorIndex == -1) return null;
@@ -99,24 +125,14 @@ export class Parser {
     return new Quote(new ParseSpan(0, input.length), prefix, uninterpretedExpression, location);
   }
 
-  parseTemplateBindings(prefixToken: string|null, input: string, location: any):
-      TemplateBindingParseResult {
-    const tokens = this._lexer.tokenize(input);
-    if (prefixToken) {
-      // Prefix the tokens with the tokens from prefixToken but have them take no space (0 index).
-      const prefixTokens = this._lexer.tokenize(prefixToken).map(t => {
-        t.index = 0;
-        return t;
-      });
-      tokens.unshift(...prefixTokens);
-    }
-    return new _ParseAST(input, location, tokens, input.length, false, this.errors, 0)
-        .parseTemplateBindings();
+  parseTemplateBindings(tplKey: string, tplValue: string, location: any): TemplateBindingParseResult {
+    const tokens = this._lexer.tokenize(tplValue);
+    return new _ParseAST(tplValue, location, tokens, tplValue.length, false, this.errors, 0)
+      .parseTemplateBindings(tplKey);
   }
 
-  parseInterpolation(
-      input: string, location: any,
-      interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource|null {
+  parseInterpolation(input: string, location: any,
+                     interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): ASTWithSource | null {
     const split = this.splitInterpolation(input, location, interpolationConfig);
     if (split == null) return null;
 
@@ -127,22 +143,21 @@ export class Parser {
       const sourceToLex = this._stripComments(expressionText);
       const tokens = this._lexer.tokenize(sourceToLex);
       const ast = new _ParseAST(
-                      input, location, tokens, sourceToLex.length, false, this.errors,
-                      split.offsets[i] + (expressionText.length - sourceToLex.length))
-                      .parseChain();
+        input, location, tokens, sourceToLex.length, false, this.errors,
+        split.offsets[i] + (expressionText.length - sourceToLex.length))
+        .parseChain();
       expressions.push(ast);
     }
 
     return new ASTWithSource(
-        new Interpolation(
-            new ParseSpan(0, input == null ? 0 : input.length), split.strings, expressions),
-        input, location, this.errors);
+      new Interpolation(
+        new ParseSpan(0, input == null ? 0 : input.length), split.strings, expressions),
+      input, location, this.errors);
   }
 
-  splitInterpolation(
-      input: string, location: string,
-      interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): SplitInterpolation
-      |null {
+  splitInterpolation(input: string, location: string,
+                     interpolationConfig: InterpolationConfig = DEFAULT_INTERPOLATION_CONFIG): SplitInterpolation
+    | null {
     const regexp = _createInterpolateRegExp(interpolationConfig);
     const parts = input.split(regexp);
     if (parts.length <= 1) {
@@ -165,9 +180,9 @@ export class Parser {
         offset += part.length + interpolationConfig.end.length;
       } else {
         this._reportError(
-            'Blank expressions are not allowed in interpolated strings', input,
-            `at column ${this._findInterpolationErrorColumn(parts, i, interpolationConfig)} in`,
-            location);
+          'Blank expressions are not allowed in interpolated strings', input,
+          `at column ${this._findInterpolationErrorColumn(parts, i, interpolationConfig)} in`,
+          location);
         expressions.push('$implict');
         offsets.push(offset);
       }
@@ -175,10 +190,10 @@ export class Parser {
     return new SplitInterpolation(strings, expressions, offsets);
   }
 
-  wrapLiteralPrimitive(input: string|null, location: any): ASTWithSource {
+  wrapLiteralPrimitive(input: string | null, location: any): ASTWithSource {
     return new ASTWithSource(
-        new LiteralPrimitive(new ParseSpan(0, input == null ? 0 : input.length), input), input,
-        location, this.errors);
+      new LiteralPrimitive(new ParseSpan(0, input == null ? 0 : input.length), input), input,
+      location, this.errors);
   }
 
   private _stripComments(input: string): string {
@@ -186,8 +201,8 @@ export class Parser {
     return i != null ? input.substring(0, i).trim() : input;
   }
 
-  private _commentStart(input: string): number|null {
-    let outerQuote: number|null = null;
+  private _commentStart(input: string): number | null {
+    let outerQuote: number | null = null;
     for (let i = 0; i < input.length - 1; i++) {
       const char = input.charCodeAt(i);
       const nextChar = input.charCodeAt(i + 1);
@@ -203,26 +218,24 @@ export class Parser {
     return null;
   }
 
-  private _checkNoInterpolation(
-      input: string, location: any, interpolationConfig: InterpolationConfig): void {
+  private _checkNoInterpolation(input: string, location: any, interpolationConfig: InterpolationConfig): void {
     const regexp = _createInterpolateRegExp(interpolationConfig);
     const parts = input.split(regexp);
     if (parts.length > 1) {
       this._reportError(
-          `Got interpolation (${interpolationConfig.start}${interpolationConfig.end}) where expression was expected`,
-          input,
-          `at column ${this._findInterpolationErrorColumn(parts, 1, interpolationConfig)} in`,
-          location);
+        `Got interpolation (${interpolationConfig.start}${interpolationConfig.end}) where expression was expected`,
+        input,
+        `at column ${this._findInterpolationErrorColumn(parts, 1, interpolationConfig)} in`,
+        location);
     }
   }
 
-  private _findInterpolationErrorColumn(
-      parts: string[], partInErrIdx: number, interpolationConfig: InterpolationConfig): number {
+  private _findInterpolationErrorColumn(parts: string[], partInErrIdx: number, interpolationConfig: InterpolationConfig): number {
     let errLocation = '';
     for (let j = 0; j < partInErrIdx; j++) {
       errLocation += j % 2 === 0 ?
-          parts[j] :
-          `${interpolationConfig.start}${parts[j]}${interpolationConfig.end}`;
+        parts[j] :
+        `${interpolationConfig.start}${parts[j]}${interpolationConfig.end}`;
     }
 
     return errLocation.length;
@@ -236,26 +249,32 @@ export class _ParseAST {
 
   index: number = 0;
 
-  constructor(
-      public input: string, public location: any, public tokens: Token[],
-      public inputLength: number, public parseAction: boolean, private errors: ParserError[],
-      private offset: number) {}
+  constructor(public input: string, public location: any, public tokens: Token[],
+              public inputLength: number, public parseAction: boolean, private errors: ParserError[],
+              private offset: number) {
+  }
 
   peek(offset: number): Token {
     const i = this.index + offset;
     return i < this.tokens.length ? this.tokens[i] : EOF;
   }
 
-  get next(): Token { return this.peek(0); }
+  get next(): Token {
+    return this.peek(0);
+  }
 
   get inputIndex(): number {
     return (this.index < this.tokens.length) ? this.next.index + this.offset :
-                                               this.inputLength + this.offset;
+      this.inputLength + this.offset;
   }
 
-  span(start: number) { return new ParseSpan(start, this.inputIndex); }
+  span(start: number) {
+    return new ParseSpan(start, this.inputIndex);
+  }
 
-  advance() { this.index++; }
+  advance() {
+    this.index++;
+  }
 
   optionalCharacter(code: number): boolean {
     if (this.next.isCharacter(code)) {
@@ -266,8 +285,13 @@ export class _ParseAST {
     }
   }
 
-  peekKeywordLet(): boolean { return this.next.isKeywordLet(); }
-  peekKeywordAs(): boolean { return this.next.isKeywordAs(); }
+  peekKeywordLet(): boolean {
+    return this.next.isKeywordLet();
+  }
+
+  peekKeywordAs(): boolean {
+    return this.next.isKeywordAs();
+  }
 
   expectCharacter(code: number) {
     if (this.optionalCharacter(code)) return;
@@ -350,7 +374,9 @@ export class _ParseAST {
     return result;
   }
 
-  parseExpression(): AST { return this.parseConditional(); }
+  parseExpression(): AST {
+    return this.parseConditional();
+  }
 
   parseConditional(): AST {
     const start = this.inputIndex;
@@ -478,13 +504,15 @@ export class _ParseAST {
       switch (operator) {
         case '+':
           this.advance();
-          return this.parsePrefix();
+          result = this.parsePrefix();
+          return new Binary(
+            this.span(start), '-', result, new LiteralPrimitive(new ParseSpan(start, start), 0));
         case '-':
           this.advance();
           result = this.parsePrefix();
           return new Binary(
-              this.span(start), operator, new LiteralPrimitive(new ParseSpan(start, start), 0),
-              result);
+            this.span(start), operator, new LiteralPrimitive(new ParseSpan(start, start), 0),
+            result);
         case '!':
           this.advance();
           result = this.parsePrefix();
@@ -612,7 +640,7 @@ export class _ParseAST {
       do {
         const quoted = this.next.isString();
         const key = this.expectIdentifierOrKeywordOrString();
-        keys.push({key, quoted});
+        keys.push({ key, quoted });
         this.expectCharacter(chars.$COLON);
         values.push(this.parsePipe());
       } while (this.optionalCharacter(chars.$COMMA));
@@ -633,7 +661,7 @@ export class _ParseAST {
       this.rparensExpected--;
       const span = this.span(start);
       return isSafe ? new SafeMethodCall(span, receiver, id, args) :
-                      new MethodCall(span, receiver, id, args);
+        new MethodCall(span, receiver, id, args);
 
     } else {
       if (isSafe) {
@@ -669,7 +697,7 @@ export class _ParseAST {
   }
 
   /**
-   * An identifier, a keyword, a string with an optional `-` inbetween.
+   * An identifier, a keyword, a string with an optional `-` in between.
    */
   expectTemplateBindingKey(): string {
     let result = '';
@@ -685,48 +713,49 @@ export class _ParseAST {
     return result.toString();
   }
 
-  parseTemplateBindings(): TemplateBindingParseResult {
+  // Parses the AST for `<some-tag *tplKey=AST>`
+  parseTemplateBindings(tplKey: string): TemplateBindingParseResult {
+    let firstBinding = true;
     const bindings: TemplateBinding[] = [];
-    let prefix: string = null !;
     const warnings: string[] = [];
-    while (this.index < this.tokens.length) {
+    do {
       const start = this.inputIndex;
-      let keyIsVar: boolean = this.peekKeywordLet();
-      if (keyIsVar) {
-        this.advance();
+      let rawKey: string;
+      let key: string;
+      let isVar: boolean = false;
+      if (firstBinding) {
+        rawKey = key = tplKey;
+        firstBinding = false;
+      } else {
+        isVar = this.peekKeywordLet();
+        if (isVar) this.advance();
+        rawKey = this.expectTemplateBindingKey();
+        key = isVar ? rawKey : tplKey + rawKey[0].toUpperCase() + rawKey.substring(1);
+        this.optionalCharacter(chars.$COLON);
       }
-      let rawKey = this.expectTemplateBindingKey();
-      let key = rawKey;
-      if (!keyIsVar) {
-        if (prefix == null) {
-          prefix = key;
-        } else {
-          key = prefix + key[0].toUpperCase() + key.substring(1);
-        }
-      }
-      this.optionalCharacter(chars.$COLON);
+
       let name: string = null !;
-      let expression: ASTWithSource = null !;
-      if (keyIsVar) {
+      let expression: ASTWithSource | null = null;
+      if (isVar) {
         if (this.optionalOperator('=')) {
           name = this.expectTemplateBindingKey();
         } else {
           name = '\$implicit';
         }
       } else if (this.peekKeywordAs()) {
-        const letStart = this.inputIndex;
         this.advance();  // consume `as`
         name = rawKey;
         key = this.expectTemplateBindingKey();  // read local var name
-        keyIsVar = true;
+        isVar = true;
       } else if (this.next !== EOF && !this.peekKeywordLet()) {
         const start = this.inputIndex;
         const ast = this.parsePipe();
         const source = this.input.substring(start - this.offset, this.inputIndex - this.offset);
         expression = new ASTWithSource(ast, source, this.location, this.errors);
       }
-      bindings.push(new TemplateBinding(this.span(start), key, keyIsVar, name, expression));
-      if (this.peekKeywordAs() && !keyIsVar) {
+
+      bindings.push(new TemplateBinding(this.span(start), key, isVar, name, expression));
+      if (this.peekKeywordAs() && !isVar) {
         const letStart = this.inputIndex;
         this.advance();                                   // consume `as`
         const letName = this.expectTemplateBindingKey();  // read local var name
@@ -735,19 +764,20 @@ export class _ParseAST {
       if (!this.optionalCharacter(chars.$SEMICOLON)) {
         this.optionalCharacter(chars.$COMMA);
       }
-    }
+    } while (this.index < this.tokens.length);
+
     return new TemplateBindingParseResult(bindings, warnings, this.errors);
   }
 
-  error(message: string, index: number|null = null) {
+  error(message: string, index: number | null = null) {
     this.errors.push(new ParserError(message, this.input, this.locationText(index), this.location));
     this.skip();
   }
 
-  private locationText(index: number|null = null) {
+  private locationText(index: number | null = null) {
     if (index == null) index = this.index;
     return (index < this.tokens.length) ? `at column ${this.tokens[index].index + 1} in` :
-                                          `at the end of the expression`;
+      `at the end of the expression`;
   }
 
   // Error recovery should skip tokens until it encounters a recovery point. skip() treats
@@ -766,12 +796,12 @@ export class _ParseAST {
   private skip() {
     let n = this.next;
     while (this.index < this.tokens.length && !n.isCharacter(chars.$SEMICOLON) &&
-           (this.rparensExpected <= 0 || !n.isCharacter(chars.$RPAREN)) &&
-           (this.rbracesExpected <= 0 || !n.isCharacter(chars.$RBRACE)) &&
-           (this.rbracketsExpected <= 0 || !n.isCharacter(chars.$RBRACKET))) {
+    (this.rparensExpected <= 0 || !n.isCharacter(chars.$RPAREN)) &&
+    (this.rbracesExpected <= 0 || !n.isCharacter(chars.$RBRACE)) &&
+    (this.rbracketsExpected <= 0 || !n.isCharacter(chars.$RBRACKET))) {
       if (this.next.isError()) {
         this.errors.push(new ParserError(
-            this.next.toString() !, this.input, this.locationText(), this.location));
+          this.next.toString() !, this.input, this.locationText(), this.location));
       }
       this.advance();
       n = this.next;
@@ -788,45 +818,70 @@ class SimpleExpressionChecker implements AstVisitor {
 
   errors: string[] = [];
 
-  visitImplicitReceiver(ast: ImplicitReceiver, context: any) {}
+  visitImplicitReceiver(ast: ImplicitReceiver, context: any) {
+  }
 
-  visitInterpolation(ast: Interpolation, context: any) {}
+  visitInterpolation(ast: Interpolation, context: any) {
+  }
 
-  visitLiteralPrimitive(ast: LiteralPrimitive, context: any) {}
+  visitLiteralPrimitive(ast: LiteralPrimitive, context: any) {
+  }
 
-  visitPropertyRead(ast: PropertyRead, context: any) {}
+  visitPropertyRead(ast: PropertyRead, context: any) {
+  }
 
-  visitPropertyWrite(ast: PropertyWrite, context: any) {}
+  visitPropertyWrite(ast: PropertyWrite, context: any) {
+  }
 
-  visitSafePropertyRead(ast: SafePropertyRead, context: any) {}
+  visitSafePropertyRead(ast: SafePropertyRead, context: any) {
+  }
 
-  visitMethodCall(ast: MethodCall, context: any) {}
+  visitMethodCall(ast: MethodCall, context: any) {
+  }
 
-  visitSafeMethodCall(ast: SafeMethodCall, context: any) {}
+  visitSafeMethodCall(ast: SafeMethodCall, context: any) {
+  }
 
-  visitFunctionCall(ast: FunctionCall, context: any) {}
+  visitFunctionCall(ast: FunctionCall, context: any) {
+  }
 
-  visitLiteralArray(ast: LiteralArray, context: any) { this.visitAll(ast.expressions); }
+  visitLiteralArray(ast: LiteralArray, context: any) {
+    this.visitAll(ast.expressions);
+  }
 
-  visitLiteralMap(ast: LiteralMap, context: any) { this.visitAll(ast.values); }
+  visitLiteralMap(ast: LiteralMap, context: any) {
+    this.visitAll(ast.values);
+  }
 
-  visitBinary(ast: Binary, context: any) {}
+  visitBinary(ast: Binary, context: any) {
+  }
 
-  visitPrefixNot(ast: PrefixNot, context: any) {}
+  visitPrefixNot(ast: PrefixNot, context: any) {
+  }
 
-  visitNonNullAssert(ast: NonNullAssert, context: any) {}
+  visitNonNullAssert(ast: NonNullAssert, context: any) {
+  }
 
-  visitConditional(ast: Conditional, context: any) {}
+  visitConditional(ast: Conditional, context: any) {
+  }
 
-  visitPipe(ast: BindingPipe, context: any) { this.errors.push('pipes'); }
+  visitPipe(ast: BindingPipe, context: any) {
+    this.errors.push('pipes');
+  }
 
-  visitKeyedRead(ast: KeyedRead, context: any) {}
+  visitKeyedRead(ast: KeyedRead, context: any) {
+  }
 
-  visitKeyedWrite(ast: KeyedWrite, context: any) {}
+  visitKeyedWrite(ast: KeyedWrite, context: any) {
+  }
 
-  visitAll(asts: any[]): any[] { return asts.map(node => node.visit(this)); }
+  visitAll(asts: any[]): any[] {
+    return asts.map(node => node.visit(this));
+  }
 
-  visitChain(ast: Chain, context: any) {}
+  visitChain(ast: Chain, context: any) {
+  }
 
-  visitQuote(ast: Quote, context: any) {}
+  visitQuote(ast: Quote, context: any) {
+  }
 }
