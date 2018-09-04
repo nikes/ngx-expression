@@ -1,5 +1,5 @@
 import { ModuleWithProviders, NgModule, Optional, SkipSelf } from '@angular/core';
-import { NgxExpressionsService } from './ngx-expressions.service';
+import { NgxExpressionsService } from './services/ngx-expressions.service';
 
 @NgModule({
   imports: [],
