@@ -35,17 +35,27 @@ export class NgxExpressionsService {
                  type: ASTParseType,
                  visitor: AstVisitor,
                  context?: any,
+                 location: any = null,
                  interpolationConfig?: InterpolationConfig): { ast: any, source: string } {
     if (isString(input)) {
       let ast: ASTWithSource | null;
       switch (type) {
         default:
         case ASTParseType.INTERPOLATION:
-          ast = this._parser.parseInterpolation(input, null, interpolationConfig);
+          ast = this._parser.parseInterpolation(input, location, interpolationConfig);
           break;
         case ASTParseType.ACTION:
-          ast = this._parser.parseAction(input, null, interpolationConfig);
+          ast = this._parser.parseAction(input, location, interpolationConfig);
           break;
+        case ASTParseType.BINDING:
+          ast = this._parser.parseBinding(input, location, interpolationConfig);
+          break;
+        case ASTParseType.SIMPLE_BINDING:
+          ast = this._parser.parseSimpleBinding(input, location, interpolationConfig);
+          break;
+        // case ASTParseType.TEMPLATE_BINDINGS:
+        //   ast = this._parser.parseTemplateBindings();
+        //   break;
       }
       if (ast) {
         return { ast: ast.visit(visitor, context), source: ast.source };
@@ -58,5 +68,8 @@ export class NgxExpressionsService {
 
 enum ASTParseType {
   INTERPOLATION = 'interpolation',
-  ACTION = 'action'
+  ACTION = 'action',
+  BINDING = 'binding',
+  SIMPLE_BINDING = 'simple_binding',
+  // TEMPLATE_BINDINGS = 'template_bindings'
 }
